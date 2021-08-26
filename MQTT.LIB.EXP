@@ -281,7 +281,7 @@ END_CASE
 
 (* Keep Alive *)
 TON_KeepAliveTimer(IN := i_xEnable AND (NOT xResetKeepAliveTimer) AND (i_tKeepAliveTimeInterval > t#0s), PT := i_tKeepAliveTimeInterval);
-IF q_udiState <> 51 AND q_udiState <> 0 AND q_udiState <> 5 AND q_udiState <> 10 AND q_udiState <> 90 THEN (* W tej linii poprawilem - kamiKAC *)
+IF q_udiState <> 51 AND q_udiState <> 0 AND q_udiState <> 5 AND q_udiState <> 10 AND q_udiState <> 90 THEN
 	xResetKeepAliveTimer := FALSE;	(* Keep Alive timer should run if not waiting for PINGRESP *)
 END_IF
 IF TON_KeepAliveTimer.Q AND NOT (q_udiState = 51) THEN

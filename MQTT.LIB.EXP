@@ -81,6 +81,7 @@ END_FUNCTION_BLOCK
 
 	Ported to Codesys 2 by Lugaresi on 18 Jan 2019 (https://github.com/Lugaresi/codesys2-mqtt-library)
 	Fixed by huwylphi on 18 Sep 2020 (https://github.com/huwylphi/codesys2-mqtt-library)
+	Fixed by kamiKAC on 26 Sep 2021 ((https://github.com/kamiKAC/codesys2-mqtt-library)
 
 	This Function Block implements an MQTT Client
 	Allows to Publish Messages to an MQTT-Broker
@@ -280,7 +281,7 @@ END_CASE
 
 (* Keep Alive *)
 TON_KeepAliveTimer(IN := i_xEnable AND (NOT xResetKeepAliveTimer) AND (i_tKeepAliveTimeInterval > t#0s), PT := i_tKeepAliveTimeInterval);
-IF q_udiState <> 51 THEN
+IF q_udiState <> 51 AND q_udiState <> 0 AND q_udiState <> 5 AND q_udiState <> 10 AND q_udiState <> 90 THEN (* W tej linii poprawilem - kamiKAC *)
 	xResetKeepAliveTimer := FALSE;	(* Keep Alive timer should run if not waiting for PINGRESP *)
 END_IF
 IF TON_KeepAliveTimer.Q AND NOT (q_udiState = 51) THEN

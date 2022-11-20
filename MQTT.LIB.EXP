@@ -119,6 +119,7 @@ VAR_INPUT
 	i_xSubscribe							: BOOL := FALSE;										(* Subscribe to the Topic given to the Input i_sTopicSubscribe *)
 	i_tKeepAliveTimeInterval				: TIME := t#1m;										(* Keep Alive time interval (max = 18 hours 12 minutes and 15 seconds), default = 1 minute. *)
 	i_tCommTimeout						: TIME := t#1s;											(* General communication timeout *)
+	i_tReconnectDelay					: TIME := t#5s;											(* Autoreconnect delay *)
 END_VAR
 
 VAR_OUTPUT
@@ -211,15 +212,17 @@ CASE q_udiState OF
 			sockAddr.sin_addr := 0;
 			IF i_tKeepAliveTimeInterval > t#18h12m15s THEN i_tKeepAliveTimeInterval := t#18h12m15s; END_IF	(* Keep Alive maximum time interval is 18 hours 12 minutes and 15 seconds) *)
 		END_IF
-	
+
 		IF (NOT q_xError) THEN
 			q_sDiagMsg := 'Wait for Enable';
 		END_IF
-		IF (R_TRIG_Enable.Q OR (i_xAutoReconnect AND q_xError)) THEN
+		IF (i_xAutoReconnect AND q_xError) THEN
 			q_xError := FALSE;
+			q_udiState := 4;			(* Autoreconnect Delay *)
+		ELSIF (R_TRIG_Enable.Q ) THEN
 			q_udiState := 5;			(* Create Socket *)
 		END_IF
-
+	4:	AC_ReconnectDelay();		(* Autoreconnect Delay *)
 	5:	AC_CreateSocket();			(* Create Socket *)
 	10:	AC_ConnectToTCPserver();	(* Connect to TCP Server *)
 	15:	AC_InitOutBuffer();			(* Initialize Output Buffer *)
@@ -574,7 +577,7 @@ Notes:
 - Payload: it contains one or more length-prefixed fields, whose presence is determined by the flags in the variable header. These fields, if present, MUST appear in the order Client Identifier, Will Topic, Will Message, User Name, Password
 	- Client Identifier: each Client connecting to the Server has a unique ClientId. The ClientId MUST be present and MUST be the first field in the CONNECT packet payload.
 		The Server MUST allow ClientIds which are between 1 and 23 UTF-8 encoded bytes in length, and that contain only the characters "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".
-		* The Server MAY allow ClientId’s that contain more than 23 encoded bytes. The Server MAY allow ClientId’s that contain characters not included in the list given above.
+		* The Server MAY allow ClientIdâ€™s that contain more than 23 encoded bytes. The Server MAY allow ClientIdâ€™s that contain characters not included in the list given above.
 		If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1.
 		If the Client supplies a zero-byte ClientId with CleanSession set to 0, the Server MUST respond to the CONNECT Packet with a CONNACK return code 0x02 (Identifier rejected) and then close the Network Connection.
 		If the Server rejects the ClientId it MUST respond to the CONNECT Packet with a CONNACK return code 0x02 (Identifier rejected) and then close the Network Connection.
@@ -688,6 +691,20 @@ q_sDiagMsg := 'Initialize Out-Buffer';
 q_udiState := 20;	(* Send CONNECT: After a Network Connection is established by a Client to a Server, the first Packet sent from the Client to the Server MUST be a CONNECT Packet. *)
 END_ACTION
 
+ACTION	AC_ReconnectDelay:
+(* Autoreconnect delay
+----------------------
+*)
+
+q_sDiagMsg := 'Autoreconnect delay';
+tTimeOutValue := i_tReconnectDelay;
+
+(* Timeout *)
+IF (TON_TimeOut.Q) THEN
+	q_udiState := 5;	(* Wait for Enable *)
+END_IF
+END_ACTION
+
 ACTION	AC_SendCONNECT:
 (* Send CONNECT
 --------------------------
@@ -722,7 +739,7 @@ Notes:
 - Payload: it contains one or more length-prefixed fields, whose presence is determined by the flags in the variable header. These fields, if present, MUST appear in the order Client Identifier, Will Topic, Will Message, User Name, Password
 	- Client Identifier: each Client connecting to the Server has a unique ClientId. The ClientId MUST be present and MUST be the first field in the CONNECT packet payload.
 		The Server MUST allow ClientIds which are between 1 and 23 UTF-8 encoded bytes in length, and that contain only the characters "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".
-		* The Server MAY allow ClientId’s that contain more than 23 encoded bytes. The Server MAY allow ClientId’s that contain characters not included in the list given above.
+		* The Server MAY allow ClientIdâ€™s that contain more than 23 encoded bytes. The Server MAY allow ClientIdâ€™s that contain characters not included in the list given above.
 		If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1.
 		If the Client supplies a zero-byte ClientId with CleanSession set to 0, the Server MUST respond to the CONNECT Packet with a CONNACK return code 0x02 (Identifier rejected) and then close the Network Connection.
 		If the Server rejects the ClientId it MUST respond to the CONNECT Packet with a CONNACK return code 0x02 (Identifier rejected) and then close the Network Connection.
@@ -1022,6 +1039,7 @@ IF (TON_TimeOut.Q) THEN
 	q_sDiagMsg := 'Waiting for SUBACK from MQTT-Broker Timed Out';
 END_IF
 END_ACTION
+
 
 
 
